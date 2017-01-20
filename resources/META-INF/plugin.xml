@@ -1,0 +1,43 @@
+<idea-plugin version="2">
+  <id>com.github.s4nchez.okeydoke.idea</id>
+  <name>Okey-doke Plugin</name>
+  <version>0.1</version>
+  <vendor email="ivan@gourame.com" url="http://www.github.com/s4nchez/okey-doke-idea">Ivan Sanchez</vendor>
+
+  <description><![CDATA[
+      Enter short description for your plugin here.<br>
+      <em>most HTML tags may be used</em>
+    ]]></description>
+
+  <change-notes><![CDATA[
+      Add change notes here.<br>
+      <em>most HTML tags may be used</em>
+    ]]>
+  </change-notes>
+
+  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
+  <idea-version since-build="141.0"/>
+
+  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+       on how to target different products -->
+  <!-- uncomment to enable plugin in all products
+  <depends>com.intellij.modules.lang</depends>
+  -->
+
+  <extensions defaultExtensionNs="com.intellij">
+  </extensions>
+
+  <actions>
+    <action id="approve_single" class="com.github.s4nchez.okeydoke.idea.ApproveAction"
+            text="Approve this test"
+            description="Approve Test(s)"
+            icon="/com/github/s4nchez/okeydoke/idea/icons/approve.png">
+    </action>
+
+    <group id="OkeyDokeActions">
+      <reference id="approve_single"/>
+      <add-to-group group-id="RunContextGroup" anchor="last"/>
+    </group>
+  </actions>
+
+</idea-plugin>
