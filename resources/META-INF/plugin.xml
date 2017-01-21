@@ -32,6 +32,9 @@
             text="Approve"
             description="Approve Tests"
             icon="/com/github/s4nchez/okeydoke/idea/icons/approve.png">
+      <keyboard-shortcut keymap="Mac OS X" first-keystroke="shift ctrl a"/>
+      <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="shift ctrl a"/>
+      <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl a"/>
     </action>
 
     <group id="OkeyDokeActions">
