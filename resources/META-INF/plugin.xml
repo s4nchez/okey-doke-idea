@@ -29,8 +29,8 @@
 
   <actions>
     <action id="approve_single" class="com.github.s4nchez.okeydoke.idea.ApproveAction"
-            text="Approve this test"
-            description="Approve Test(s)"
+            text="Approve"
+            description="Approve Tests"
             icon="/com/github/s4nchez/okeydoke/idea/icons/approve.png">
     </action>
 
