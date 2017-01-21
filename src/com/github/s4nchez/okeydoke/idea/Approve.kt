@@ -9,7 +9,7 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VfsUtilCore.iterateChildrenRecursively
 import com.intellij.openapi.vfs.VirtualFile
 
-class ApproveAction : AnAction() {
+class Approve : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         e.module().contentRoots().forEach { root ->
@@ -26,7 +26,7 @@ class ApproveAction : AnAction() {
         e.presentation.text = "Approve all '${e.module().name}' tests"
     }
 
-    private fun Module.contentRoots(): Array<out VirtualFile> = ModuleRootManager.getInstance(this).contentRoots
+    private fun Module.contentRoots() = ModuleRootManager.getInstance(this).contentRoots
 
     private fun AnActionEvent.module() = ConfigurationContext.getFromContext(dataContext).module
 
@@ -34,7 +34,7 @@ class ApproveAction : AnAction() {
 
     private fun VirtualFile.approve() {
         val approvalTestFileName = name.replace(Regex("actual$"), "approved")
-        parent.findChild(approvalTestFileName)?.delete(this@ApproveAction)
-        rename(this@ApproveAction, approvalTestFileName)
+        parent.findChild(approvalTestFileName)?.delete(this@Approve)
+        rename(this@Approve, approvalTestFileName)
     }
 }
