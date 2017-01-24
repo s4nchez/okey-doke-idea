@@ -3,13 +3,16 @@ package com.github.s4nchez.okeydoke.idea
 import com.intellij.execution.actions.ConfigurationContext
 import com.intellij.execution.actions.ConfigurationContext.getFromContext
 import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigurationType
+import com.intellij.execution.junit.JUnitUtil
+import com.intellij.execution.junit.JavaRuntimeConfigurationProducerBase
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.*
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
 import com.intellij.psi.search.FilenameIndex
 
 class Approve : AnAction() {
@@ -29,25 +32,24 @@ class Approve : AnAction() {
     }
 
     fun PsiElement?.findApprovalTests(): Collection<ApprovalTest> {
-        return when (this) {
-            is PsiDirectory -> {
-                val psiPackage = JavaDirectoryService.getInstance().getPackage(this)
-                if (psiPackage != null) {
-                    return project.findApprovalTests { f -> f.path.contains(psiPackage.qualifiedName.replace(".", "/")) }
-                }
-                listOf()
-            }
-            is PsiClass -> {
-                return project.findApprovalTests { file -> file.path.contains(pathPrefix()) }
-            }
-            is PsiMethod -> {
-                return project.findApprovalTests { file -> file.path.contains(containingClass?.pathPrefix() + "." + name) }
-            }
-            is PsiIdentifier -> {
-                context.findApprovalTests()
-            }
-            else -> listOf()
+        if (this == null) return listOf()
+
+        val selectedMethod = JUnitUtil.getTestMethod(this)
+        if (selectedMethod != null) {
+            return project.findApprovalTests { file -> file.path.contains(selectedMethod.containingClass?.pathPrefix() + "." + selectedMethod.name) }
         }
+
+        val selectedClass = JUnitUtil.getTestClass(this)
+        if (selectedClass != null) {
+            return project.findApprovalTests { file -> file.path.contains(selectedClass.pathPrefix()) }
+        }
+
+        val selectedPackage = JavaRuntimeConfigurationProducerBase.checkPackage(this)
+        if (selectedPackage != null) {
+            return project.findApprovalTests { f -> f.path.contains(selectedPackage.qualifiedName.replace(".", "/")) }
+        }
+
+        return listOf()
     }
 
     private fun ConfigurationContext.psiElement() = location?.psiElement
