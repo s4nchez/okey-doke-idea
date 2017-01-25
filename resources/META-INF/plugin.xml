@@ -11,6 +11,7 @@
 
   <change-notes><![CDATA[
       <ul>
+        <li>0.3 - Kotlin support.</li>
         <li>0.2 - Better detection of context based on caret.</li>
         <li>0.1 - Basic approval.</li>
       </ul>
@@ -25,6 +26,7 @@
   <!-- uncomment to enable plugin in all products
   <depends>com.intellij.modules.lang</depends>
   -->
+  <depends>org.jetbrains.kotlin</depends>
 
   <extensions defaultExtensionNs="com.intellij">
   </extensions>

@@ -9,5 +9,15 @@
     </content>
     <orderEntry type="jdk" jdkName="IntelliJ IDEA IU-163.9166.29" jdkType="IDEA JDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library>
+        <CLASSES>
+          <root url="file://$USER_HOME$/Downloads/Kotlin/lib" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+        <jarDirectory url="file://$USER_HOME$/Downloads/Kotlin/lib" recursive="false" />
+      </library>
+    </orderEntry>
   </component>
 </module>

@@ -13,7 +13,15 @@ import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiMethod
 import com.intellij.psi.search.FilenameIndex
+import com.intellij.psi.util.PsiTreeUtil.getParentOfType
+import org.jetbrains.kotlin.asJava.toLightClass
+import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtFunction
+import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 class Approve : AnAction() {
 
@@ -34,12 +42,12 @@ class Approve : AnAction() {
     fun PsiElement?.findApprovalTests(): Collection<ApprovalTest> {
         if (this == null) return listOf()
 
-        val selectedMethod = JUnitUtil.getTestMethod(this)
+        val selectedMethod = getTestMethod()
         if (selectedMethod != null) {
             return project.findApprovalTests { file -> file.path.contains(selectedMethod.containingClass?.pathPrefix() + "." + selectedMethod.name) }
         }
 
-        val selectedClass = JUnitUtil.getTestClass(this)
+        val selectedClass = getTestClass()
         if (selectedClass != null) {
             return project.findApprovalTests { file -> file.path.contains(selectedClass.pathPrefix()) }
         }
@@ -50,6 +58,33 @@ class Approve : AnAction() {
         }
 
         return listOf()
+    }
+
+    private fun PsiElement.getTestMethod(): PsiMethod? {
+        val javaMethod = JUnitUtil.getTestMethod(this)
+        if (javaMethod != null) return javaMethod
+
+        val ktFunction = this.getParentOfType<KtNamedFunction>(false) ?: return null
+        val owner = getParentOfType(ktFunction, KtFunction::class.java, KtClass::class.java)
+
+        if (owner is KtClass) {
+            val delegate = owner.toLightClass() ?: return null
+            val ktMethod = delegate.methods.firstOrNull { it.navigationElement == ktFunction } ?: return null
+            if (JUnitUtil.getTestMethod(ktMethod) != null) return ktMethod
+        }
+        return null
+    }
+
+    private fun PsiElement.getTestClass(): PsiClass? {
+        val javaClass = JUnitUtil.getTestClass(this)
+        if(javaClass != null) return javaClass
+
+        val containingFile = containingFile as? KtFile ?: return null
+        var ktClass = getParentOfType<KtClass>(false)
+        if (!ktClass.isJUnitTestClass()) {
+            ktClass = getTestClassInFile(containingFile)
+        }
+        return ktClass?.toLightClass()
     }
 
     private fun ConfigurationContext.psiElement() = location?.psiElement
@@ -75,6 +110,12 @@ class Approve : AnAction() {
             .map { ApprovalTest(it, it.dotActualFile()) }
 
     private fun VirtualFile.dotActualFile(): VirtualFile? = parent.children.find { it.name == name.replace(Regex("approved$"), "actual") }
+
+    private fun KtClass?.isJUnitTestClass() =
+        this?.toLightClass()?.let { JUnitUtil.isTestClass(it, false, true) } ?: false
+
+    private fun getTestClassInFile(ktFile: KtFile) =
+        ktFile.declarations.filterIsInstance<KtClass>().singleOrNull { it.isJUnitTestClass() }
 }
 
 data class ApprovalTest(val approved: VirtualFile, val actual: VirtualFile?)
