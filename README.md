@@ -1,5 +1,5 @@
 # okey-doke-idea
-IntelliJ IDEA Plugin for okey-doke
+IntelliJ IDEA Plugin for [Okey-doke Approval Test library](https://github.com/dmcg/okey-doke)
 
 Details available in the [JetBrains IntelliJ Plugins page](https://plugins.jetbrains.com/idea/plugin/9424-okey-doke-support).
 
