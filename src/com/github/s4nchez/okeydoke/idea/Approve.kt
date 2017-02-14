@@ -11,6 +11,7 @@ import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.impl.status.StatusBarUtil
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
@@ -27,17 +28,20 @@ class Approve : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val context = getFromContext(e.dataContext)
-        context.psiElement().findApprovalTests().forEach { file -> file.actual?.approve() }
+        val psiElement = context.psiElement()
+        val pendingTests = psiElement.findTestsPendingApproval()
+        pendingTests.forEach { file -> file.actual?.approve() }
+        updateStatusBar(context, pendingTests)
     }
 
     override fun update(e: AnActionEvent) {
         e.presentation.text = "Approve Tests"
         val context = getFromContext(e.dataContext)
         e.presentation.isVisible = context.isJUnit()
-        e.presentation.isEnabled = context.psiElement().findApprovalTests()
-            .filter { t -> t.actual != null }
-            .isNotEmpty()
+        e.presentation.isEnabled = context.psiElement().findTestsPendingApproval().isNotEmpty()
     }
+
+    private fun PsiElement?.findTestsPendingApproval() = findApprovalTests().filter { t -> t.actual != null }
 
     fun PsiElement?.findApprovalTests(): Collection<ApprovalTest> {
         if (this == null) return listOf()
@@ -95,6 +99,12 @@ class Approve : AnAction() {
             parent.findChild(approvalTestFileName)?.delete(this@Approve)
             rename(this@Approve, approvalTestFileName)
         }
+    }
+
+    private fun updateStatusBar(context: ConfigurationContext, pendingTests: List<ApprovalTest>) {
+        val message = StringBuilder("Approved ${pendingTests.size} test")
+        if (pendingTests.size > 1) message.append("s")
+        StatusBarUtil.setStatusBarInfo(context.project, message.append(".").toString())
     }
 
     private fun ConfigurationContext.isJUnit(): Boolean {
