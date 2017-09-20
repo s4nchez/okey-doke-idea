@@ -26,25 +26,26 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 class Approve : AnAction() {
 
-    override fun actionPerformed(e: AnActionEvent) {
-        val context = getFromContext(e.dataContext)
-        val psiElement = context.psiElement()
-        val pendingTests = psiElement.findTestsPendingApproval()
+    override fun actionPerformed(event: AnActionEvent) {
+        val context = event.configContext
+        val pendingTests = context.psiElement().findTestsPendingApproval()
         pendingTests.forEach { file -> file.actual?.approve() }
         updateStatusBar(context, pendingTests)
     }
 
-    override fun update(e: AnActionEvent) {
-        e.presentation.text = "Approve Tests"
-        val context = getFromContext(e.dataContext)
-        e.presentation.isVisible = context.isJUnit()
-        e.presentation.isEnabled = context.psiElement().findTestsPendingApproval().isNotEmpty()
+    override fun update(event: AnActionEvent) {
+        event.presentation.apply {
+            val context = event.configContext
+            text = "Approve Tests"
+            isVisible = context.isJUnit()
+            isEnabled = context.psiElement().findTestsPendingApproval().isNotEmpty()
+        }
     }
 
-    private fun PsiElement?.findTestsPendingApproval() = findApprovalTests().filter { t -> t.actual != null }
+    private fun PsiElement?.findTestsPendingApproval() = findApprovalTests().filter { it.actual != null }
 
-    fun PsiElement?.findApprovalTests(): Collection<ApprovalTest> {
-        if (this == null) return listOf()
+    private fun PsiElement?.findApprovalTests(): Collection<ApprovalTest> {
+        if (this == null) return emptyList()
 
         val selectedMethod = getTestMethod()
         if (selectedMethod != null) {
@@ -58,10 +59,10 @@ class Approve : AnAction() {
 
         val selectedPackage = JavaRuntimeConfigurationProducerBase.checkPackage(this)
         if (selectedPackage != null) {
-            return project.findApprovalTests { f -> f.path.contains(selectedPackage.qualifiedName.replace(".", "/")) }
+            return project.findApprovalTests { file -> file.path.contains(selectedPackage.qualifiedName.replace(".", "/")) }
         }
 
-        return listOf()
+        return emptyList()
     }
 
     private fun PsiElement.getTestMethod(): PsiMethod? {
@@ -81,7 +82,7 @@ class Approve : AnAction() {
 
     private fun PsiElement.getTestClass(): PsiClass? {
         val javaClass = JUnitUtil.getTestClass(this)
-        if(javaClass != null) return javaClass
+        if (javaClass != null) return javaClass
 
         val containingFile = containingFile as? KtFile ?: return null
         var ktClass = getParentOfType<KtClass>(false)
@@ -126,6 +127,9 @@ class Approve : AnAction() {
 
     private fun getTestClassInFile(ktFile: KtFile) =
         ktFile.declarations.filterIsInstance<KtClass>().singleOrNull { it.isJUnitTestClass() }
-}
 
-data class ApprovalTest(val approved: VirtualFile, val actual: VirtualFile?)
+    private val AnActionEvent.configContext: ConfigurationContext get() = getFromContext(this.dataContext)
+
+
+    private data class ApprovalTest(val approved: VirtualFile, val actual: VirtualFile?)
+}
