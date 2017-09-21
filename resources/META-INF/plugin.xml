@@ -41,7 +41,6 @@
         <group id="OkeyDokeActions">
             <reference id="approve_single"/>
             <add-to-group group-id="RunContextGroup" anchor="last"/>
-            <add-to-group group-id="FileMenu" anchor="last"/>
         </group>
     </actions>
 

@@ -9,14 +9,13 @@ import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.impl.status.StatusBarUtil
-import com.intellij.psi.PsiElement
 import com.intellij.psi.search.FilenameIndex
 
 class Approve : AnAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val context = event.configContext
-        val pendingTests = findTestsPendingApprovalAt(context.psiElement())
+        val pendingTests = context.findTestsPendingApproval()
         pendingTests.forEach { file -> file.actual?.approve() }
         updateStatusBar(context, pendingTests)
     }
@@ -24,16 +23,13 @@ class Approve : AnAction() {
     override fun update(event: AnActionEvent) {
         event.presentation.apply {
             val context = event.configContext
-            text = "Approve Tests"
-            isVisible = context.isJUnit()
-            isEnabled = findTestsPendingApprovalAt(context.psiElement()).isNotEmpty()
+            isVisible = context.isJUnit() || context.isOkeydokeFile()
+            isEnabled = context.findTestsPendingApproval().isNotEmpty()
         }
     }
 
-    private fun findTestsPendingApprovalAt(psiElement: PsiElement?) = findApprovalTestsAt(psiElement).filter { it.actual != null }
-
-    private fun findApprovalTestsAt(psiElement: PsiElement?): Collection<ApprovalTest> {
-        if (psiElement == null) return emptyList()
+    private fun ConfigurationContext.findTestsPendingApproval(): List<ApprovalTest> {
+        val psiElement = location?.psiElement ?: return emptyList()
 
         val psiMethod = psiElement.currentTestMethod()
         if (psiMethod != null) {
@@ -45,6 +41,10 @@ class Approve : AnAction() {
             return psiElement.project.findApprovalTestsAt { file -> file.path.contains(psiClass.pathPrefix()) }
         }
 
+        if (psiElement.containingFile != null && this.isOkeydokeFile()) {
+            return psiElement.project.findApprovalTestsAt { file -> file.nameWithoutExtension == psiElement.containingFile.virtualFile.nameWithoutExtension }
+        }
+
         val psiPackage = psiElement.currentPackage()
         if (psiPackage != null) {
             return psiElement.project.findApprovalTestsAt { file -> file.path.contains(psiPackage.qualifiedName.replace(".", "/")) }
@@ -52,8 +52,6 @@ class Approve : AnAction() {
 
         return emptyList()
     }
-
-    private fun ConfigurationContext.psiElement() = location?.psiElement
 
     private fun VirtualFile.approve() {
         runWriteAction {
@@ -69,12 +67,17 @@ class Approve : AnAction() {
         StatusBarUtil.setStatusBarInfo(context.project, message.append(".").toString())
     }
 
+    private fun ConfigurationContext.isOkeydokeFile(): Boolean {
+        val file = psiLocation?.containingFile?.virtualFile ?: return false
+        return file.name.endsWith(".actual") || file.name.endsWith(".approved")
+    }
+
     private fun ConfigurationContext.isJUnit(): Boolean {
         val runnerConfig = configuration
         return runnerConfig != null && runnerConfig.type == findConfigurationType("JUnit")
     }
 
-    private fun Project.findApprovalTestsAt(filter: (VirtualFile) -> Boolean): Collection<ApprovalTest> =
+    private fun Project.findApprovalTestsAt(filter: (VirtualFile) -> Boolean): List<ApprovalTest> =
         FilenameIndex.getAllFilesByExt(this, "approved")
             .filter(filter)
             .map { ApprovalTest(it, it.dotActualFile()) }
