@@ -5,11 +5,12 @@ import com.intellij.execution.actions.ConfigurationContext.getFromContext
 import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigurationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.application.runWriteAction
+import com.intellij.openapi.application.runUndoTransparentWriteAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.impl.status.StatusBarUtil
 import com.intellij.psi.search.FilenameIndex
+import java.util.*
 
 class Approve : AnAction() {
 
@@ -31,42 +32,42 @@ class Approve : AnAction() {
         }
     }
 
-    private fun ConfigurationContext.findTestsPendingApproval(): List<ApprovalTest> {
+    private fun ConfigurationContext.findTestsPendingApproval(): List<ApprovalData> {
         val psiElement = location?.psiElement ?: return emptyList()
 
         val psiMethod = psiElement.currentTestMethod()
         if (psiMethod != null) {
-            return psiElement.project.findApprovalTestsAt { file -> file.path.contains(psiMethod.containingClass?.pathPrefix() + "." + psiMethod.name) }
+            return psiElement.project.findApprovalTests { file -> file.path.contains(psiMethod.containingClass?.pathPrefix() + "." + psiMethod.name) }
         }
 
         val psiClass = psiElement.currentTestClass()
         if (psiClass != null) {
-            return psiElement.project.findApprovalTestsAt { file -> file.path.contains(psiClass.pathPrefix()) }
+            return psiElement.project.findApprovalTests { file -> file.path.contains(psiClass.pathPrefix()) }
         }
 
         if (psiElement.containingFile != null && this.isOkeydokeFile()) {
-            return psiElement.project.findApprovalTestsAt { file -> file.nameWithoutExtension == psiElement.containingFile.virtualFile.nameWithoutExtension }
+            return psiElement.project.findApprovalTests { file -> file.nameWithoutExtension == psiElement.containingFile.virtualFile.nameWithoutExtension }
         }
 
         val psiPackage = psiElement.currentPackage()
         if (psiPackage != null) {
-            return psiElement.project.findApprovalTestsAt { file -> file.path.contains(psiPackage.qualifiedName.replace(".", "/")) }
+            return psiElement.project.findApprovalTests { file -> file.path.contains(psiPackage.qualifiedName.replace(".", "/")) }
         }
 
         return emptyList()
     }
 
     private fun VirtualFile.approve() {
-        runWriteAction {
+        runUndoTransparentWriteAction {
             val approvalTestFileName = name.replacePostfix(actualExtension, approvedExtension)
             parent.findChild(approvalTestFileName)?.delete(this@Approve)
             rename(this@Approve, approvalTestFileName)
         }
     }
 
-    private fun updateStatusBar(context: ConfigurationContext, pendingTests: List<ApprovalTest>) {
-        val message = StringBuilder("Approved ${pendingTests.size} test")
-        if (pendingTests.size > 1) message.append("s")
+    private fun updateStatusBar(context: ConfigurationContext, approvals: List<ApprovalData>) {
+        val message = StringBuilder("Approved ${approvals.size} test")
+        if (approvals.size > 1) message.append("s")
         StatusBarUtil.setStatusBarInfo(context.project, message.append(".").toString())
     }
 
@@ -75,22 +76,47 @@ class Approve : AnAction() {
         return file.name.endsWith(actualExtension) || file.name.endsWith(approvedExtension)
     }
 
-    private fun ConfigurationContext.isJUnit(): Boolean {
-        val runnerConfig = configuration
-        return runnerConfig != null && runnerConfig.type == findConfigurationType("JUnit")
+    private fun Project.findApprovalTests(filter: (VirtualFile) -> Boolean): List<ApprovalData> {
+        val approvedFiles = FilenameIndex.getAllFilesByExt(this, approvedExtension.substring(1)).filter(filter)
+        val actualFiles = FilenameIndex.getAllFilesByExt(this, actualExtension.substring(1)).filter(filter)
+
+        return outerJoin(approvedFiles, actualFiles) { approved, actual -> areFilesForTheSameTest(approved, actual) }
+            .map{ (approved, actual) -> ApprovalData(approved, actual) }
+            .filterNot{ it.approved != null && it.actual == null }
     }
 
-    private fun Project.findApprovalTestsAt(filter: (VirtualFile) -> Boolean): List<ApprovalTest> =
-        FilenameIndex.getAllFilesByExt(this, approvedExtension.substring(1))
-            .filter(filter)
-            .map { ApprovalTest(it, it.findActualFile()) }
+    private fun <T> outerJoin(left: List<T>, right: List<T>, match: (T, T) -> Boolean): List<Pair<T?, T?>> {
+        val mutableRight = ArrayList(right)
 
-    private fun VirtualFile.findActualFile(): VirtualFile? = parent.children.find { it.name == name.replacePostfix(approvedExtension, actualExtension) }
+        val leftAndInnerResult = left.mapNotNull { leftMatch ->
+            val rightMatch = mutableRight.find { match(leftMatch, it) }
+            if (rightMatch == null) {
+                Pair(leftMatch, null)
+            } else {
+                mutableRight.remove(rightMatch)
+                Pair(leftMatch, rightMatch)
+            }
+        }
+        val rightResult = mutableRight.map { Pair(null, it) }
 
-    private val AnActionEvent.configContext: ConfigurationContext get() = getFromContext(this.dataContext)
+        return leftAndInnerResult + rightResult
+    }
 
-    private fun String.replacePostfix(postfix: String, replacement: String) =
-        if (!endsWith(postfix)) this else substring(0, length - postfix.length) + replacement
-
-    private data class ApprovalTest(val approved: VirtualFile, val actual: VirtualFile?)
+    private fun areFilesForTheSameTest(file1: VirtualFile, file2: VirtualFile) =
+        file1.path.replacePostfix(approvedExtension, "") == file2.path.replacePostfix(actualExtension, "") ||
+        file1.path.replacePostfix(actualExtension, "") == file2.path.replacePostfix(approvedExtension, "")
 }
+
+
+private data class ApprovalData(val approved: VirtualFile?, val actual: VirtualFile?)
+
+
+private fun ConfigurationContext.isJUnit(): Boolean {
+    val runnerConfig = configuration
+    return runnerConfig != null && runnerConfig.type == findConfigurationType("JUnit")
+}
+
+private val AnActionEvent.configContext: ConfigurationContext get() = getFromContext(this.dataContext)
+
+private fun String.replacePostfix(postfix: String, replacement: String) =
+    if (!endsWith(postfix)) this else substring(0, length - postfix.length) + replacement
