@@ -13,6 +13,9 @@ import com.intellij.psi.search.FilenameIndex
 
 class Approve : AnAction() {
 
+    private val actualExtension = ".actual"
+    private val approvedExtension = ".approved"
+
     override fun actionPerformed(event: AnActionEvent) {
         val context = event.configContext
         val pendingTests = context.findTestsPendingApproval()
@@ -55,7 +58,7 @@ class Approve : AnAction() {
 
     private fun VirtualFile.approve() {
         runWriteAction {
-            val approvalTestFileName = name.replace(Regex("actual$"), "approved")
+            val approvalTestFileName = name.replacePostfix(actualExtension, approvedExtension)
             parent.findChild(approvalTestFileName)?.delete(this@Approve)
             rename(this@Approve, approvalTestFileName)
         }
@@ -69,7 +72,7 @@ class Approve : AnAction() {
 
     private fun ConfigurationContext.isOkeydokeFile(): Boolean {
         val file = psiLocation?.containingFile?.virtualFile ?: return false
-        return file.name.endsWith(".actual") || file.name.endsWith(".approved")
+        return file.name.endsWith(actualExtension) || file.name.endsWith(approvedExtension)
     }
 
     private fun ConfigurationContext.isJUnit(): Boolean {
@@ -78,14 +81,16 @@ class Approve : AnAction() {
     }
 
     private fun Project.findApprovalTestsAt(filter: (VirtualFile) -> Boolean): List<ApprovalTest> =
-        FilenameIndex.getAllFilesByExt(this, "approved")
+        FilenameIndex.getAllFilesByExt(this, approvedExtension.substring(1))
             .filter(filter)
-            .map { ApprovalTest(it, it.dotActualFile()) }
+            .map { ApprovalTest(it, it.findActualFile()) }
 
-    private fun VirtualFile.dotActualFile(): VirtualFile? = parent.children.find { it.name == name.replace(Regex("approved$"), "actual") }
+    private fun VirtualFile.findActualFile(): VirtualFile? = parent.children.find { it.name == name.replacePostfix(approvedExtension, actualExtension) }
 
     private val AnActionEvent.configContext: ConfigurationContext get() = getFromContext(this.dataContext)
 
+    private fun String.replacePostfix(postfix: String, replacement: String) =
+        if (!endsWith(postfix)) this else substring(0, length - postfix.length) + replacement
 
     private data class ApprovalTest(val approved: VirtualFile, val actual: VirtualFile?)
 }
