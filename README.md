@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/s4nchez/okey-doke-idea.svg?branch=master)](https://travis-ci.org/s4nchez/okey-doke-idea)
+
+
 # okey-doke-idea
 IntelliJ IDEA Plugin for the [Okey-doke Approval Test library](https://github.com/dmcg/okey-doke)
 
