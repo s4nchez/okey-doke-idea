@@ -6,6 +6,7 @@ import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigura
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.runUndoTransparentWriteAction
+import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.impl.status.StatusBarUtil
@@ -20,7 +21,14 @@ class Approve : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val context = event.configContext
         val pendingTests = context.findTestsPendingApproval()
-        pendingTests.forEach { file -> file.actual?.approve() }
+
+        CommandProcessor.getInstance().executeCommand(
+            event.project,
+            { pendingTests.forEach { file -> file.actual?.approve() } },
+            "Approve ${pendingTests.mapNotNull { it.actual?.name }.joinToString(", ")}",
+            "Okeydoke Plugin"
+        )
+
         updateStatusBar(context, pendingTests)
     }
 
