@@ -6,7 +6,7 @@
 
     <description><![CDATA[
       This plugin brings basic <a href="https://github.com/dmcg/okey-doke">okey-doke</a> support.<br><br>
-      Approve tests by using the context popup menu or using Ctrl + F11 (⌘ + F11 on Mac).
+      Approve tests by using the context popup menu or using Ctrl + F11.
     ]]></description>
 
     <change-notes><![CDATA[
@@ -36,6 +36,8 @@
                 description="Approve Tests"
                 icon="/com/github/s4nchez/okeydoke/idea/icons/approve.png">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl F11"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl F11"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl F11"/>
         </action>
 
         <group id="OkeyDokeActions">
