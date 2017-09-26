@@ -5,7 +5,7 @@ import com.intellij.execution.actions.ConfigurationContext.getFromContext
 import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigurationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.application.runUndoTransparentWriteAction
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -24,7 +24,7 @@ class Approve : AnAction() {
 
         CommandProcessor.getInstance().executeCommand(
             event.project,
-            { pendingTests.forEach { file -> file.actual?.approve() } },
+            { runWriteAction { pendingTests.forEach { file -> file.actual?.approve() } } },
             "Approve ${pendingTests.mapNotNull { it.actual?.name }.joinToString(", ")}",
             "Okeydoke Plugin"
         )
@@ -66,11 +66,18 @@ class Approve : AnAction() {
     }
 
     private fun VirtualFile.approve() {
-        runUndoTransparentWriteAction {
-            val approvalTestFileName = name.replacePostfix(actualExtension, approvedExtension)
-            parent.findChild(approvalTestFileName)?.delete(this@Approve)
-            rename(this@Approve, approvalTestFileName)
+        val requestor = this@Approve
+        val actualContent = contentsToByteArray()
+        this.delete(requestor)
+
+        val approvedFileName = name.replacePostfix(actualExtension, approvedExtension)
+        var approvedFile = parent.findChild(approvedFileName)
+        if (approvedFile == null) {
+            // Explicitly create new file (instead of e.g. renaming .actual file)
+            // because it will trigger VCS listener which will add (or show dialog to add) .approved file to VCS.
+            approvedFile = parent.createChildData(requestor, approvedFileName)
         }
+        approvedFile.setBinaryContent(actualContent)
     }
 
     private fun updateStatusBar(context: ConfigurationContext, approvals: List<ApprovalData>) {
