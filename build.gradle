@@ -43,12 +43,15 @@ compileKotlin {
 }
 
 intellij {
-	def ideVersion = System.getenv().getOrDefault("OKEYDOKE_PLUGIN_IDEA_VERSION", "IC-172.3757.29")
+	def ideVersion = System.getenv().getOrDefault("OKEYDOKE_PLUGIN_IDEA_VERSION",
+		"IC-172.3757.29"
+//        "LATEST-EAP-SNAPSHOT"
+	)
 	println("Using ide version: ${ideVersion}")
 	version ideVersion
     pluginName "okey-doke-idea"
     downloadSources true
     sameSinceUntilBuild false
     updateSinceUntilBuild false
-    plugins = ["Kotlin"]
+	plugins = ["java", "Kotlin", "junit"]
 }
