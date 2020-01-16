@@ -20,7 +20,7 @@
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="141.0"/>
+    <idea-version since-build="192.5728.98"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html on how to target different products -->
     <!-- uncomment to enable plugin in all products -->
@@ -33,7 +33,7 @@
     <actions>
         <action id="approve_single" class="com.github.s4nchez.okeydoke.idea.Approve"
                 text="Approve"
-                description="Approve Tests"
+                description="Approve tests"
                 icon="/com/github/s4nchez/okeydoke/idea/icons/approve.png">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl F11"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl F11"/>

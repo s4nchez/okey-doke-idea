@@ -44,7 +44,7 @@ compileKotlin {
 
 intellij {
 	def ideVersion = System.getenv().getOrDefault("OKEYDOKE_PLUGIN_IDEA_VERSION",
-		"IC-172.3757.29"
+		"IC-192.5728.98" // This IJ version because it has "java" plugin extracted from core.
 //        "LATEST-EAP-SNAPSHOT"
 	)
 	println("Using ide version: ${ideVersion}")
