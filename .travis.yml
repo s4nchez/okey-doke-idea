@@ -1,9 +1,0 @@
-dist: trusty
-language: java
-jdk: oraclejdk8
-
-env:
-  - OKEYDOKE_PLUGIN_IDEA_VERSION=IC-192.5728.98
-  - OKEYDOKE_PLUGIN_IDEA_VERSION=LATEST-EAP-SNAPSHOT
-
-script: ./gradlew check buildPlugin --info
