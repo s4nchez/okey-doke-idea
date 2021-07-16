@@ -13,6 +13,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.impl.status.StatusBarUtil
 import com.intellij.psi.search.FilenameIndex
 
+@Suppress("UnstableApiUsage") // Remove because UpdateInBackground is stable in later IJ versions.
 class Approve : AnAction(), UpdateInBackground {
 
     private val actualExtension = ".actual"
