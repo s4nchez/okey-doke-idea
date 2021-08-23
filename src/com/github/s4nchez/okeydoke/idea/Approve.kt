@@ -12,6 +12,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.impl.status.StatusBarUtil
 import com.intellij.psi.search.FilenameIndex
+import com.intellij.psi.search.GlobalSearchScope
 
 @Suppress("UnstableApiUsage") // Remove because UpdateInBackground is stable in later IJ versions.
 class Approve : AnAction(), UpdateInBackground {
@@ -71,13 +72,11 @@ class Approve : AnAction(), UpdateInBackground {
         val actualContent = contentsToByteArray()
         this.delete(requestor)
 
-        val approvedFileName = name.replacePostfix(actualExtension, approvedExtension)
-        var approvedFile = parent.findChild(approvedFileName)
-        if (approvedFile == null) {
+        val approvedFileName = name.replace(actualExtension, approvedExtension)
+        val approvedFile = parent.findChild(approvedFileName) ?:
+            parent.createChildData(requestor, approvedFileName)
             // Explicitly create new file (instead of e.g. renaming .actual file)
             // because it will trigger VCS listener which will add (or show dialog to add) .approved file to VCS.
-            approvedFile = parent.createChildData(requestor, approvedFileName)
-        }
         approvedFile.setBinaryContent(actualContent)
     }
 
@@ -89,12 +88,12 @@ class Approve : AnAction(), UpdateInBackground {
 
     private fun ConfigurationContext.isOkeydokeFile(): Boolean {
         val file = psiLocation?.containingFile?.virtualFile ?: return false
-        return file.name.endsWith(actualExtension) || file.name.endsWith(approvedExtension)
+        return file.name.contains(actualExtension) || file.name.contains(approvedExtension)
     }
 
     private fun Project.findApprovalTests(filter: (VirtualFile) -> Boolean): List<ApprovalData> {
-        val approvedFiles = FilenameIndex.getAllFilesByExt(this, approvedExtension.substring(1)).filter(filter)
-        val actualFiles = FilenameIndex.getAllFilesByExt(this, actualExtension.substring(1)).filter(filter)
+        val approvedFiles = findFilesByName { it.contains(approvedExtension) }.filter(filter)
+        val actualFiles = findFilesByName { it.contains(actualExtension) }.filter(filter)
 
         return outerJoin(approvedFiles, actualFiles) { approved, actual -> areFilesForTheSameTest(approved, actual) }
             .map{ (approved, actual) -> ApprovalData(approved, actual) }
@@ -119,8 +118,8 @@ class Approve : AnAction(), UpdateInBackground {
     }
 
     private fun areFilesForTheSameTest(file1: VirtualFile, file2: VirtualFile) =
-        file1.path.replacePostfix(approvedExtension, "") == file2.path.replacePostfix(actualExtension, "") ||
-        file1.path.replacePostfix(actualExtension, "") == file2.path.replacePostfix(approvedExtension, "")
+        file1.path.replace(approvedExtension, "") == file2.path.replace(actualExtension, "") ||
+        file1.path.replace(actualExtension, "") == file2.path.replace(approvedExtension, "")
 }
 
 
@@ -134,5 +133,7 @@ private fun ConfigurationContext.isJUnit(): Boolean {
 
 private val AnActionEvent.configContext: ConfigurationContext get() = getFromContext(this.dataContext)
 
-private fun String.replacePostfix(postfix: String, replacement: String) =
-    if (!endsWith(postfix)) this else substring(0, length - postfix.length) + replacement
+private fun Project.findFilesByName(predicate: (String) -> Boolean): List<VirtualFile> =
+    FilenameIndex.getAllFilenames(this)
+        .filter(predicate)
+        .flatMap { FilenameIndex.getVirtualFilesByName(this, it, GlobalSearchScope.allScope(this)).toList() }
