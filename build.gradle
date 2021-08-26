@@ -1,5 +1,4 @@
 buildscript {
-    // See https://plugins.jetbrains.com/docs/intellij/kotlin.html#kotlin-standard-library for lowest bundled kotlin stdlib version.
     ext.kotlin_version = "1.3.70"
     repositories {
 		mavenCentral()
@@ -38,8 +37,9 @@ compileKotlin {
 }
 
 intellij {
-	// See https://www.jetbrains.com/intellij-repository/snapshots for available snpashots.
-	version = System.getenv().getOrDefault("OKEYDOKE_PLUGIN_IDEA_VERSION",
+	// See https://www.jetbrains.com/intellij-repository/snapshots for available snapshots.
+    // See https://plugins.jetbrains.com/docs/intellij/kotlin.html#kotlin-standard-library for the lowest bundled kotlin stdlib version.
+    version = System.getenv().getOrDefault("OKEYDOKE_PLUGIN_IDEA_VERSION",
 		"IC-202.7660.26" // This IJ version because it has "java" plugin extracted from core.
         // "212.4638-EAP-CANDIDATE-SNAPSHOT" // Version which is close to LATEST-EAP but won't be constantly re-downloaded.
         // "LATEST-EAP-SNAPSHOT"
