@@ -11,6 +11,7 @@
 
     <change-notes><![CDATA[
       <ul>
+        <li>0.6.2 - Allow use with .actual.someotherext filenames.</li>
         <li>0.6.1 - Remove deprecated API usage.</li>
         <li>0.6 - Update to latest IDE support.</li>
         <li>0.4 - Add message to status bar after tests are approved.</li>
