@@ -2,8 +2,6 @@ package com.github.s4nchez.okeydoke.idea
 
 import com.intellij.execution.actions.ConfigurationContext
 import com.intellij.execution.actions.ConfigurationContext.getFromContext
-import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigurationType
-import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionPlaces.UNKNOWN
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
