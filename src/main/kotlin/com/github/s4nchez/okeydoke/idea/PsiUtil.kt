@@ -1,7 +1,7 @@
 package com.github.s4nchez.okeydoke.idea
 
 import com.intellij.execution.junit.JUnitUtil
-import com.intellij.execution.junit.JavaRuntimeConfigurationProducerBase
+import com.intellij.execution.testframework.AbstractJavaTestConfigurationProducer
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
@@ -14,8 +14,7 @@ import org.jetbrains.kotlin.psi.KtFunction
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
-fun PsiElement.currentPackage() =
-    JavaRuntimeConfigurationProducerBase.checkPackage(this)
+fun PsiElement.currentPackage() = AbstractJavaTestConfigurationProducer.checkPackage(this)
 
 fun PsiElement.currentTestMethod(): PsiMethod? {
     val javaMethod = JUnitUtil.getTestMethod(this)

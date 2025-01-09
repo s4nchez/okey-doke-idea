@@ -41,6 +41,7 @@ tasks {
 dependencies {
     intellijPlatform {
         intellijIdeaCommunity("2023.1.7")
+        bundledPlugins("com.intellij.java", "org.jetbrains.kotlin")
         instrumentationTools()
     }
 }

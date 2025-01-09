@@ -3,9 +3,10 @@ package com.github.s4nchez.okeydoke.idea
 import com.intellij.execution.actions.ConfigurationContext
 import com.intellij.execution.actions.ConfigurationContext.getFromContext
 import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigurationType
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionPlaces.UNKNOWN
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.UpdateInBackground
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.project.Project
@@ -14,8 +15,7 @@ import com.intellij.openapi.wm.impl.status.StatusBarUtil
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 
-@Suppress("UnstableApiUsage") // Remove because UpdateInBackground is stable in later IJ versions.
-class Approve : AnAction(), UpdateInBackground {
+class Approve : AnAction() {
 
     private val actualExtension = ".actual"
     private val approvedExtension = ".approved"
@@ -122,16 +122,13 @@ class Approve : AnAction(), UpdateInBackground {
         file1.path.replace(actualExtension, "") == file2.path.replace(approvedExtension, "")
 }
 
-
 private data class ApprovalData(val approved: VirtualFile?, val actual: VirtualFile?)
 
+private fun ConfigurationContext.isJUnit() = configuration
+    ?.let { it.type.id in setOf("GradleRunConfiguration", "JUnit") }
+    ?: false
 
-private fun ConfigurationContext.isJUnit(): Boolean {
-    val runnerConfig = configuration
-    return runnerConfig != null && runnerConfig.type == findConfigurationType("JUnit")
-}
-
-private val AnActionEvent.configContext: ConfigurationContext get() = getFromContext(this.dataContext)
+private val AnActionEvent.configContext: ConfigurationContext get() = getFromContext(this.dataContext, UNKNOWN)
 
 private fun Project.findFilesByName(predicate: (String) -> Boolean): List<VirtualFile> =
     FilenameIndex.getAllFilenames(this)
