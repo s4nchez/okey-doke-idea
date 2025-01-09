@@ -2,6 +2,9 @@ package com.github.s4nchez.okeydoke.idea
 
 import com.intellij.execution.actions.ConfigurationContext
 import com.intellij.execution.actions.ConfigurationContext.getFromContext
+import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigurationType
+import com.intellij.execution.testframework.TestTreeView
+import com.intellij.execution.testframework.sm.runner.SMTestProxy
 import com.intellij.openapi.actionSystem.ActionPlaces.UNKNOWN
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -9,9 +12,11 @@ import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.wm.impl.status.StatusBarUtil
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
+import org.jetbrains.kotlin.idea.base.util.projectScope
 
 class Approve : AnAction() {
 
@@ -20,7 +25,7 @@ class Approve : AnAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val context = event.configContext
-        val pendingTests = context.findTestsPendingApproval()
+        val pendingTests = context.findTestsPendingApproval(event)
 
         CommandProcessor.getInstance().executeCommand(
             event.project,
@@ -36,11 +41,28 @@ class Approve : AnAction() {
         event.presentation.apply {
             val context = event.configContext
             isVisible = context.isJUnit() || context.isOkeydokeFile()
-            isEnabled = context.findTestsPendingApproval().isNotEmpty()
+            isEnabled = context.findTestsPendingApproval(event).isNotEmpty()
         }
     }
 
-    private fun ConfigurationContext.findTestsPendingApproval(): List<ApprovalData> {
+    private fun ConfigurationContext.findTestsPendingApproval(event: AnActionEvent): List<ApprovalData> {
+        val treeView = TestTreeView.MODEL_DATA_KEY.getData(event.dataContext)?.treeView
+        val elementsFromTree = treeView
+            ?.let { it.selectionPaths?.mapNotNull { testPath -> it.getSelectedTest(testPath) } ?: emptyList() }
+            ?.mapNotNull { selectedTest ->
+                val locationUrl = selectedTest.locationUrl ?: return@mapNotNull null
+                if (selectedTest is SMTestProxy) {
+                    event.project?.let { project ->
+                        val protocol = VirtualFileManager.extractProtocol(locationUrl)!!
+                        val path =
+                            VirtualFileManager.extractPath(locationUrl).removeSuffix("(Approver)")
+                        selectedTest.locator.getLocation(protocol, path, project, project.projectScope())
+                    }
+                } else null
+            }?.flatten() ?: emptyList()
+
+        println(elementsFromTree)
+
         val psiElement = location?.psiElement ?: return emptyList()
 
         val psiMethod = psiElement.currentTestMethod()
@@ -59,7 +81,14 @@ class Approve : AnAction() {
 
         val psiPackage = psiElement.currentPackage()
         if (psiPackage != null) {
-            return psiElement.project.findApprovalTests { file -> file.path.contains(psiPackage.qualifiedName.replace(".", "/")) }
+            return psiElement.project.findApprovalTests { file ->
+                file.path.contains(
+                    psiPackage.qualifiedName.replace(
+                        ".",
+                        "/"
+                    )
+                )
+            }
         }
 
         return emptyList()
@@ -71,10 +100,9 @@ class Approve : AnAction() {
         this.delete(requestor)
 
         val approvedFileName = name.replace(actualExtension, approvedExtension)
-        val approvedFile = parent.findChild(approvedFileName) ?:
-            parent.createChildData(requestor, approvedFileName)
-            // Explicitly create new file (instead of e.g. renaming .actual file)
-            // because it will trigger VCS listener which will add (or show dialog to add) .approved file to VCS.
+        val approvedFile = parent.findChild(approvedFileName) ?: parent.createChildData(requestor, approvedFileName)
+        // Explicitly create new file (instead of e.g. renaming .actual file)
+        // because it will trigger VCS listener which will add (or show dialog to add) .approved file to VCS.
         approvedFile.setBinaryContent(actualContent)
     }
 
@@ -94,8 +122,8 @@ class Approve : AnAction() {
         val actualFiles = findFilesByName { it.contains(actualExtension) }.filter(filter)
 
         return outerJoin(approvedFiles, actualFiles) { approved, actual -> areFilesForTheSameTest(approved, actual) }
-            .map{ (approved, actual) -> ApprovalData(approved, actual) }
-            .filterNot{ it.approved != null && it.actual == null }
+            .map { (approved, actual) -> ApprovalData(approved, actual) }
+            .filterNot { it.approved != null && it.actual == null }
     }
 
     private fun <T> outerJoin(left: List<T>, right: List<T>, match: (T, T) -> Boolean): List<Pair<T?, T?>> {
@@ -117,14 +145,16 @@ class Approve : AnAction() {
 
     private fun areFilesForTheSameTest(file1: VirtualFile, file2: VirtualFile) =
         file1.path.replace(approvedExtension, "") == file2.path.replace(actualExtension, "") ||
-        file1.path.replace(actualExtension, "") == file2.path.replace(approvedExtension, "")
+                file1.path.replace(actualExtension, "") == file2.path.replace(approvedExtension, "")
 }
 
 private data class ApprovalData(val approved: VirtualFile?, val actual: VirtualFile?)
 
-private fun ConfigurationContext.isJUnit() = configuration
-    ?.let { it.type.id in setOf("GradleRunConfiguration", "JUnit") }
-    ?: false
+private fun ConfigurationContext.isJUnit() =
+    setOf(findConfigurationType("GradleRunConfiguration"), findConfigurationType("JUnit"))
+        .filterNotNull()
+        .any { isCompatibleWithOriginalRunConfiguration(it) }
+
 
 private val AnActionEvent.configContext: ConfigurationContext get() = getFromContext(this.dataContext, UNKNOWN)
 
