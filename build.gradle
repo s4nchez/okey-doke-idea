@@ -7,16 +7,6 @@ repositories {
     mavenCentral()
 }
 
-sourceSets {
-    main {
-        kotlin.srcDir "src"
-        resources.srcDir "resources"
-    }
-    test {
-        kotlin.srcDir "test"
-    }
-}
-
 compileKotlin {
     kotlinOptions {
         jvmTarget = "11"
