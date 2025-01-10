@@ -11,6 +11,7 @@
 
     <change-notes><![CDATA[
       <ul>
+        <li>0.8.0 - Support for showing diffs of selected approval files via Approval Diffs popup action
         <li>0.7.1 - Declare k2 compatibility</li>
         <li>0.7.0 - Support for multiple file approval and approval from test result view</li>
         <li>0.6.2 - Allow use with .actual.someotherext filenames.</li>
@@ -47,13 +48,16 @@
                 description="Approve tests"
                 icon="/com/github/s4nchez/okeydoke/idea/icons/approve.png">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl F11"/>
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl F11"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl F11"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta F11"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta F11"/>
         </action>
 
         <action id="approval_diff" class="com.github.s4nchez.okeydoke.idea.ShowApprovalDiffs"
                 text="Approval Diff"
                 description="Approval Diff">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl F12"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta F12"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta F12"/>
         </action>
 
         <group id="OkeyDokeActions">
