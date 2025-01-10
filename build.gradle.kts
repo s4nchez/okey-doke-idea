@@ -1,3 +1,5 @@
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.models.ProductRelease
 import java.net.URI
 
 plugins {
@@ -30,6 +32,17 @@ intellijPlatform {
         // token can be retrieved from https://plugins.jetbrains.com/author/me/tokens
         token = providers.gradleProperty("intellijPlatformPublishingToken")
     }
+
+    pluginVerification {
+        ides {
+            select {
+                types = listOf(IntelliJPlatformType.IntellijIdeaCommunity)
+                channels = listOf(ProductRelease.Channel.RELEASE)
+                sinceBuild = "232"
+                untilBuild = "243.*"
+            }
+        }
+    }
 }
 
 tasks {
@@ -45,5 +58,6 @@ dependencies {
         intellijIdeaCommunity("2023.1.7")
         bundledPlugins("com.intellij.java", "org.jetbrains.kotlin")
         instrumentationTools()
+        pluginVerifier()
     }
 }
