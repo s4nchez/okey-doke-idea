@@ -5,6 +5,7 @@ import com.intellij.execution.actions.ConfigurationContext.getFromContext
 import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigurationType
 import com.intellij.execution.testframework.TestTreeView
 import com.intellij.execution.testframework.sm.runner.SMTestProxy
+import com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode
 import com.intellij.ide.projectView.impl.nodes.PsiFileNode
 import com.intellij.openapi.actionSystem.ActionPlaces.UNKNOWN
 import com.intellij.openapi.actionSystem.AnAction
@@ -95,8 +96,13 @@ class Approve : AnAction() {
                 when (selectedNode) {
                     is PsiFileNode -> if (selectedNode.virtualFile.isOkeydokeFile()) {
                         project.findApprovalTests { file -> file.nameWithoutExtension == selectedNode.virtualFile?.nameWithoutExtension }
+                            .distinct()
                     } else emptyList()
-                    //is PsiDirectoryNode -> TODO support packages
+
+                    is PsiDirectoryNode -> selectedNode.virtualFile?.let { selectedDirectory ->
+                        project.findApprovalTests { file -> file.path.contains(selectedDirectory.path) }
+                    } ?: emptyList()
+
                     else -> emptyList()
                 }
             }.flatten()
