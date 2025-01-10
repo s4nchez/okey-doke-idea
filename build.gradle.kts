@@ -3,7 +3,6 @@ import java.net.URI
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.intellij.platform") version "2.0.1"
-    id("dev.bmac.intellij.plugin-uploader") version "1.3.3"
 }
 
 repositories {
