@@ -3,10 +3,11 @@ package com.github.s4nchez.okeydoke.idea
 import com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode
 import com.intellij.ide.projectView.impl.nodes.PsiFileNode
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.project.Project
 
 fun selectionFromProjectView(project: Project, event: AnActionEvent): List<ApprovalData> {
-    val selection = event.dataContext.getData("selectedItems") as? Array<*> ?: return emptyList()
+    val selection = PlatformCoreDataKeys.SELECTED_ITEMS.getData(event.dataContext) as? Array<*> ?: return emptyList()
 
     return selection
         .mapNotNull { selectedNode ->
