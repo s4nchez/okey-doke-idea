@@ -25,15 +25,17 @@ intellijPlatform {
     pluginConfiguration {
         version = pluginVersion
     }
+    publishing {
+        // export ORG_GRADLE_PROJECT_intellijPlatformPublishingToken='YOUR_TOKEN' to publish the plugin
+        // token can be retrieved from https://plugins.jetbrains.com/author/me/tokens
+        token = providers.gradleProperty("intellijPlatformPublishingToken")
+    }
 }
 
 tasks {
     patchPluginXml {
         sinceBuild.set("231")
         version = pluginVersion
-    }
-    publishPlugin {
-        token.set(System.getenv("ORG_GRADLE_PROJECT_intellijPublishToken"))
     }
 }
 
