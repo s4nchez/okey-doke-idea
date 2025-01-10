@@ -5,6 +5,8 @@ import com.intellij.execution.actions.ConfigurationContext.getFromContext
 import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigurationType
 import com.intellij.execution.testframework.TestTreeView
 import com.intellij.execution.testframework.sm.runner.SMTestProxy
+import com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode
+import com.intellij.ide.projectView.impl.nodes.PsiFileNode
 import com.intellij.openapi.actionSystem.ActionPlaces.UNKNOWN
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -16,6 +18,8 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.wm.impl.status.StatusBarUtil
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
+import org.jetbrains.kotlin.asJava.classes.KtLightClass
+import org.jetbrains.kotlin.asJava.elements.KtLightMethod
 import org.jetbrains.kotlin.idea.base.util.projectScope
 
 class Approve : AnAction() {
@@ -46,8 +50,73 @@ class Approve : AnAction() {
     }
 
     private fun ConfigurationContext.findTestsPendingApproval(event: AnActionEvent): List<ApprovalData> {
-        val treeView = TestTreeView.MODEL_DATA_KEY.getData(event.dataContext)?.treeView
-        val elementsFromTree = treeView
+        val project = event.project ?: return emptyList()
+
+        val selection = when (event.place) {
+            "TestTreeViewPopup" -> selectionFromTestResultsPane(project, event)
+            "ProjectViewPopup" -> selectionFromProjectView(project, event)
+            else -> emptyList()
+        }
+
+        return selection.also { toApprove ->
+            if (toApprove.isEmpty())
+                println("No pending approvals found")
+            else
+                println("Pending approvals: \n${toApprove.joinToString("\n") { "- ${it.actual}" }}")
+        }
+//
+        // get the selected items from the project view (from "ProjectViewPopup" place)
+        // (event.dataContext.getData("selectedItems") as Array<Any>)
+
+//get the selection from file (from "EditorPopup" place)
+//        val psiElement = location?.psiElement ?: return emptyList()
+//
+//        val psiMethod = psiElement.currentTestMethod()
+//        if (psiMethod != null) {
+//            return psiElement.project.findApprovalTests { file -> file.path.contains(psiMethod.containingClass?.pathPrefix() + "." + psiMethod.name) }
+//        }
+//
+//        val psiClass = psiElement.currentTestClass()
+//        if (psiClass != null) {
+//            return psiElement.project.findApprovalTests { file -> file.path.contains(psiClass.pathPrefix()) }
+//        }
+//
+//        if (psiElement.containingFile != null && this.isOkeydokeFile()) {
+//            return psiElement.project.findApprovalTests { file -> file.nameWithoutExtension == psiElement.containingFile.virtualFile.nameWithoutExtension }
+//        }
+//
+//        val psiPackage = psiElement.currentPackage()
+//        if (psiPackage != null) {
+//            return psiElement.project.findApprovalTests { file ->
+//                file.path.contains(
+//                    psiPackage.qualifiedName.replace(
+//                        ".",
+//                        "/"
+//                    )
+//                )
+//            }
+//        }
+//
+//        return emptyList()
+    }
+
+    private fun selectionFromProjectView(project: Project, event: AnActionEvent): List<ApprovalData> {
+        val selection = event.dataContext.getData("selectedItems") as? Array<*> ?: return emptyList()
+
+        return selection
+            .mapNotNull { selectedNode ->
+                when (selectedNode) {
+                    is PsiFileNode -> if (selectedNode.virtualFile.isOkeydokeFile()) {
+                        project.findApprovalTests { file -> file.nameWithoutExtension == selectedNode.virtualFile?.nameWithoutExtension }
+                    } else emptyList()
+                    //is PsiDirectoryNode -> TODO support packages
+                    else -> emptyList()
+                }
+            }.flatten()
+    }
+
+    private fun selectionFromTestResultsPane(project: Project, event: AnActionEvent): List<ApprovalData> {
+        return (TestTreeView.MODEL_DATA_KEY.getData(event.dataContext)?.treeView
             ?.let { it.selectionPaths?.mapNotNull { testPath -> it.getSelectedTest(testPath) } ?: emptyList() }
             ?.mapNotNull { selectedTest ->
                 val locationUrl = selectedTest.locationUrl ?: return@mapNotNull null
@@ -59,39 +128,19 @@ class Approve : AnAction() {
                         selectedTest.locator.getLocation(protocol, path, project, project.projectScope())
                     }
                 } else null
-            }?.flatten() ?: emptyList()
-
-        println(elementsFromTree)
-
-        val psiElement = location?.psiElement ?: return emptyList()
-
-        val psiMethod = psiElement.currentTestMethod()
-        if (psiMethod != null) {
-            return psiElement.project.findApprovalTests { file -> file.path.contains(psiMethod.containingClass?.pathPrefix() + "." + psiMethod.name) }
-        }
-
-        val psiClass = psiElement.currentTestClass()
-        if (psiClass != null) {
-            return psiElement.project.findApprovalTests { file -> file.path.contains(psiClass.pathPrefix()) }
-        }
-
-        if (psiElement.containingFile != null && this.isOkeydokeFile()) {
-            return psiElement.project.findApprovalTests { file -> file.nameWithoutExtension == psiElement.containingFile.virtualFile.nameWithoutExtension }
-        }
-
-        val psiPackage = psiElement.currentPackage()
-        if (psiPackage != null) {
-            return psiElement.project.findApprovalTests { file ->
-                file.path.contains(
-                    psiPackage.qualifiedName.replace(
-                        ".",
-                        "/"
-                    )
-                )
+            }?.flatten()
+            ?.mapNotNull { it.psiElement }
+            ?.flatMap { element ->
+                when (element) {
+                    is KtLightClass -> project.findApprovalTests { file -> file.path.contains(element.pathPrefix()) }
+                    is KtLightMethod -> project.findApprovalTests { file -> file.path.contains(element.containingClass.pathPrefix() + "." + element.name) }
+                    else -> {
+                        println("Don't recognise ${element::class}"); emptyList()
+                    }
+                }
             }
-        }
+            ?: emptyList())
 
-        return emptyList()
     }
 
     private fun VirtualFile.approve() {
@@ -114,8 +163,11 @@ class Approve : AnAction() {
 
     private fun ConfigurationContext.isOkeydokeFile(): Boolean {
         val file = psiLocation?.containingFile?.virtualFile ?: return false
-        return file.name.contains(actualExtension) || file.name.contains(approvedExtension)
+        return file.isOkeydokeFile()
     }
+
+    private fun VirtualFile?.isOkeydokeFile(): Boolean = if (this == null) false else
+        name.contains(actualExtension) || name.contains(approvedExtension)
 
     private fun Project.findApprovalTests(filter: (VirtualFile) -> Boolean): List<ApprovalData> {
         val approvedFiles = findFilesByName { it.contains(approvedExtension) }.filter(filter)
@@ -161,4 +213,4 @@ private val AnActionEvent.configContext: ConfigurationContext get() = getFromCon
 private fun Project.findFilesByName(predicate: (String) -> Boolean): List<VirtualFile> =
     FilenameIndex.getAllFilenames(this)
         .filter(predicate)
-        .flatMap { FilenameIndex.getVirtualFilesByName(this, it, GlobalSearchScope.allScope(this)).toList() }
+        .flatMap { FilenameIndex.getVirtualFilesByName(it, GlobalSearchScope.allScope(this)).toList() }
