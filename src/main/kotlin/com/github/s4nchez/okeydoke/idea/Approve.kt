@@ -4,13 +4,17 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.command.CommandProcessor
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.impl.status.StatusBarUtil
 
 class Approve : AnAction() {
 
+
+
     override fun actionPerformed(event: AnActionEvent) {
-        val pendingTests = findTestsPendingApproval(event)
+        val service = event.project!!.service<ApprovalDataService>()
+        val pendingTests = service.currentSelection()
 
         CommandProcessor.getInstance().executeCommand(
             event.project,
@@ -23,29 +27,15 @@ class Approve : AnAction() {
     }
 
     override fun update(event: AnActionEvent) {
+        if(event.project == null) return
+        val service = event.project!!.service<ApprovalDataService>()
+
         event.presentation.apply {
             isVisible = event.place in setOf("TestTreeViewPopup", "ProjectViewPopup", "EditorPopup")
-            isEnabled = findTestsPendingApproval(event).isNotEmpty()
+            isEnabled = service.findTestsPendingApproval(event).isNotEmpty()
         }
     }
 
-    private fun findTestsPendingApproval(event: AnActionEvent): List<ApprovalData> {
-        val project = event.project ?: return emptyList()
-
-        val selection = when (event.place) {
-            "TestTreeViewPopup" -> selectionFromTestTreeView(project, event)
-            "ProjectViewPopup" -> selectionFromProjectView(project, event)
-            "EditorPopup" -> selectionFromEditor(project, event)
-            else -> emptyList()
-        }
-
-        return selection.also { toApprove ->
-            if (toApprove.isEmpty())
-                println("No pending approvals found")
-            else
-                println("Pending approvals: \n${toApprove.joinToString("\n") { "- ${it.actual}" }}")
-        }
-    }
 
     private fun updateStatusBar(project: Project?, approvals: List<ApprovalData>) {
         if (project == null) return

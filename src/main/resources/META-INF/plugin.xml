@@ -51,8 +51,14 @@
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl F11"/>
         </action>
 
+        <action id="approval_diff" class="com.github.s4nchez.okeydoke.idea.ShowApprovalDiffs"
+                text="Approval Diff"
+                description="Approval Diff">
+        </action>
+
         <group id="OkeyDokeActions">
             <reference id="approve_single"/>
+            <reference id="approval_diff"/>
             <add-to-group group-id="RunContextGroup" anchor="last"/>
         </group>
     </actions>
