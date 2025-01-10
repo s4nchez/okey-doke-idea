@@ -1,8 +1,6 @@
 package com.github.s4nchez.okeydoke.idea
 
-import com.intellij.diff.DiffDialogHints
-import com.intellij.diff.DiffManager
-import com.intellij.diff.DiffRequestFactoryImpl
+import com.intellij.diff.*
 import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -10,11 +8,14 @@ import com.intellij.openapi.components.service
 
 class ShowApprovalDiffs: AnAction() {
 
-    override fun actionPerformed(event: AnActionEvent) {
-        val service = event.project!!.service<ApprovalDataService>()
+    private val myContentFactory = DiffContentFactoryEx.getInstanceEx()
 
-        val chain = service.currentSelection().map {
-            DiffRequestFactoryImpl().createFromFiles(event.project, it.approved, it.actual)
+    override fun actionPerformed(event: AnActionEvent) {
+        val approvalDataService = event.project!!.service<ApprovalDataService>()
+        val diffRequestFactory = service<DiffRequestFactory>()
+
+        val chain = approvalDataService.currentSelection().map {
+            diffRequestFactory.createFromFiles(event.project, it.approved, it.actual)
         }.let { SimpleDiffRequestChain(it) }
 
         DiffManager.getInstance().showDiff(event.project!!, chain, DiffDialogHints.DEFAULT)
