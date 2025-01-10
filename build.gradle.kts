@@ -21,7 +21,7 @@ kotlin {
     }
 }
 
-val pluginVersion = "0.7.0"
+val pluginVersion = "0.7.1"
 
 intellijPlatform {
     pluginConfiguration {
