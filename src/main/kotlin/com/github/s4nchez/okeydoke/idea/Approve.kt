@@ -5,7 +5,6 @@ import com.intellij.execution.actions.ConfigurationContext.getFromContext
 import com.intellij.execution.configurations.ConfigurationTypeUtil.findConfigurationType
 import com.intellij.execution.testframework.TestTreeView
 import com.intellij.execution.testframework.sm.runner.SMTestProxy
-import com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode
 import com.intellij.ide.projectView.impl.nodes.PsiFileNode
 import com.intellij.openapi.actionSystem.ActionPlaces.UNKNOWN
 import com.intellij.openapi.actionSystem.AnAction
@@ -29,7 +28,7 @@ class Approve : AnAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val context = event.configContext
-        val pendingTests = context.findTestsPendingApproval(event)
+        val pendingTests = findTestsPendingApproval(event)
 
         CommandProcessor.getInstance().executeCommand(
             event.project,
@@ -45,16 +44,17 @@ class Approve : AnAction() {
         event.presentation.apply {
             val context = event.configContext
             isVisible = context.isJUnit() || context.isOkeydokeFile()
-            isEnabled = context.findTestsPendingApproval(event).isNotEmpty()
+            isEnabled = findTestsPendingApproval(event).isNotEmpty()
         }
     }
 
-    private fun ConfigurationContext.findTestsPendingApproval(event: AnActionEvent): List<ApprovalData> {
+    private fun findTestsPendingApproval(event: AnActionEvent): List<ApprovalData> {
         val project = event.project ?: return emptyList()
 
         val selection = when (event.place) {
             "TestTreeViewPopup" -> selectionFromTestResultsPane(project, event)
             "ProjectViewPopup" -> selectionFromProjectView(project, event)
+            "EditorPopup" -> selectionFromEditor(project, event)
             else -> emptyList()
         }
 
@@ -64,40 +64,27 @@ class Approve : AnAction() {
             else
                 println("Pending approvals: \n${toApprove.joinToString("\n") { "- ${it.actual}" }}")
         }
-//
-        // get the selected items from the project view (from "ProjectViewPopup" place)
-        // (event.dataContext.getData("selectedItems") as Array<Any>)
+    }
 
-//get the selection from file (from "EditorPopup" place)
-//        val psiElement = location?.psiElement ?: return emptyList()
-//
-//        val psiMethod = psiElement.currentTestMethod()
-//        if (psiMethod != null) {
-//            return psiElement.project.findApprovalTests { file -> file.path.contains(psiMethod.containingClass?.pathPrefix() + "." + psiMethod.name) }
-//        }
-//
-//        val psiClass = psiElement.currentTestClass()
-//        if (psiClass != null) {
-//            return psiElement.project.findApprovalTests { file -> file.path.contains(psiClass.pathPrefix()) }
-//        }
-//
-//        if (psiElement.containingFile != null && this.isOkeydokeFile()) {
-//            return psiElement.project.findApprovalTests { file -> file.nameWithoutExtension == psiElement.containingFile.virtualFile.nameWithoutExtension }
-//        }
-//
-//        val psiPackage = psiElement.currentPackage()
-//        if (psiPackage != null) {
-//            return psiElement.project.findApprovalTests { file ->
-//                file.path.contains(
-//                    psiPackage.qualifiedName.replace(
-//                        ".",
-//                        "/"
-//                    )
-//                )
-//            }
-//        }
-//
-//        return emptyList()
+    private fun selectionFromEditor(project: Project, event: AnActionEvent): List<ApprovalData> {
+        val psiElement = event.configContext.location?.psiElement ?: return emptyList()
+
+        val psiMethod = psiElement.currentTestMethod()
+        if (psiMethod != null) {
+            return project.findApprovalTests { file -> file.path.contains(psiMethod.containingClass?.pathPrefix() + "." + psiMethod.name) }
+        }
+
+        val psiClass = psiElement.currentTestClass()
+        if (psiClass != null) {
+            return project.findApprovalTests { file -> file.path.contains(psiClass.pathPrefix()) }
+        }
+
+        val psiPackage = psiElement.currentPackage()
+        if (psiPackage != null) {
+            return project.findApprovalTests { file -> file.path.contains(psiPackage.qualifiedName.replace(".", "/")) }
+        }
+
+        return emptyList()
     }
 
     private fun selectionFromProjectView(project: Project, event: AnActionEvent): List<ApprovalData> {
