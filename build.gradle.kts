@@ -15,7 +15,7 @@ repositories {
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
@@ -35,6 +35,7 @@ intellijPlatform {
 tasks {
     patchPluginXml {
         sinceBuild.set("231")
+        untilBuild.set("243.*")
         version = pluginVersion
     }
 }
