@@ -1,5 +1,9 @@
-package com.github.s4nchez.okeydoke.idea
+package com.github.s4nchez.okeydoke.action
 
+import com.github.s4nchez.okeydoke.idea.ApprovalData
+import com.github.s4nchez.okeydoke.idea.ApprovalDataService
+import com.github.s4nchez.okeydoke.idea.approve
+import com.intellij.openapi.actionSystem.ActionUpdateThread.BGT
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.runWriteAction
@@ -10,7 +14,7 @@ import com.intellij.openapi.wm.impl.status.StatusBarUtil
 
 class Approve : AnAction() {
 
-
+    override fun getActionUpdateThread() = BGT
 
     override fun actionPerformed(event: AnActionEvent) {
         val service = event.project!!.service<ApprovalDataService>()

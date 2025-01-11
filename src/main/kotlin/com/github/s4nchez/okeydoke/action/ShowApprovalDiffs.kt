@@ -1,14 +1,16 @@
-package com.github.s4nchez.okeydoke.idea
+package com.github.s4nchez.okeydoke.action
 
+import com.github.s4nchez.okeydoke.idea.ApprovalDataService
 import com.intellij.diff.*
 import com.intellij.diff.chains.SimpleDiffRequestChain
+import com.intellij.openapi.actionSystem.ActionUpdateThread.BGT
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
 
 class ShowApprovalDiffs: AnAction() {
 
-    private val myContentFactory = DiffContentFactoryEx.getInstanceEx()
+    override fun getActionUpdateThread() = BGT
 
     override fun actionPerformed(event: AnActionEvent) {
         val approvalDataService = event.project!!.service<ApprovalDataService>()
