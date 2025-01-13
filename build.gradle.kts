@@ -4,7 +4,7 @@ import java.net.URI
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
-    id("org.jetbrains.intellij.platform") version "2.0.1"
+    id("org.jetbrains.intellij.platform")
 }
 
 repositories {
